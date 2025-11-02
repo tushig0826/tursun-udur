@@ -1,0 +1,306 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Interactive Birthday Card</title>
+<style>
+  :root {
+    --bg: #e7f4ff;
+    --envelope: #9ed8ff;
+    --flap: #7cc6ff;
+    --accent: #007bff;
+    --shadow: rgba(0,0,0,0.15);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Poppins", system-ui, sans-serif;
+    background: linear-gradient(180deg, #cdeaff, #f8fbff);
+    min-height: 100vh;
+    display: grid;
+    place-items: center;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  .wrap {
+    text-align: center;
+    width: 360px;
+    max-width: 92vw;
+    position: relative;
+  }
+
+  /* ENVELOPE */
+  .envelope {
+    position: relative;
+    width: 320px;
+    height: 220px;
+    perspective: 1000px;
+    cursor: pointer;
+  }
+
+  .env-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transform-style: preserve-3d;
+  }
+
+  .env-body {
+    position: absolute;
+    inset: 0;
+    background: var(--envelope);
+    border-radius: 6px;
+    box-shadow: 0 8px 18px var(--shadow);
+    overflow: hidden;
+    z-index: 1;
+  }
+
+  .env-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 60%;
+    background: var(--envelope);
+    clip-path: polygon(0 100%, 50% 0, 100% 100%);
+    z-index: 2;
+  }
+
+  .flap {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 60%;
+    background: var(--flap);
+    clip-path: polygon(0 0, 100% 0, 50% 100%);
+    transform-origin: top center;
+    transform-style: preserve-3d;
+    transform: rotateX(0deg);
+    transition: transform 1s cubic-bezier(.2,.9,.3,1);
+    z-index: 3;
+  }
+
+  .envelope-text {
+    position: absolute;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #084b8a;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    background: rgba(255,255,255,0.8);
+    padding: 4px 10px;
+    border-radius: 10px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+    transition: opacity 0.5s ease;
+    z-index: 10;
+  }
+
+  .envelope.open .flap {
+    transform: rotateX(-180deg);
+  }
+
+  .envelope.open .envelope-text {
+    opacity: 0;
+  }
+
+  /* LETTER PAGE */
+  .letter-page {
+    position: fixed;
+    inset: 0;
+    background: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    opacity: 0;
+    transform: scale(0.9);
+    transition: all 0.8s cubic-bezier(.2,.9,.3,1);
+    z-index: -1;
+    padding: 30px;
+    overflow-y: auto;
+  }
+
+  .letter-page.show {
+    opacity: 1;
+    transform: scale(1);
+    z-index: 100;
+  }
+
+  .letter-page h1 {
+    font-size: 2.5rem;
+    color: var(--accent);
+    margin-bottom: 10px;
+  }
+
+  .letter-page p {
+    color: #333;
+    font-size: 1.2rem;
+    max-width: 600px;
+  }
+
+  .letter-images {
+    margin-top: 30px;
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .letter-images img {
+    width: 120px;
+    height: 120px;
+    object-fit: cover;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    cursor: pointer;
+    transition: transform 0.3s ease;
+  }
+
+  .letter-images img:hover {
+    transform: scale(1.05);
+  }
+
+  .close-btn {
+    margin-top: 30px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+  }
+
+  /* Lightbox overlay */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.4s ease;
+    pointer-events: none;
+  }
+
+  .lightbox.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+
+  .lightbox img {
+    max-width: 90vw;
+    max-height: 90vh;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+
+  /* Balloons floating */
+  .balloon {
+    position: fixed;
+    bottom: -150px;
+    width: 50px;
+    height: 65px;
+    border-radius: 50%;
+    animation: floatUp 8s linear forwards;
+    z-index: 101;
+  }
+
+  @keyframes floatUp {
+    0% { transform: translateY(0) scale(1); opacity: 1; }
+    100% { transform: translateY(-110vh) scale(1.1); opacity: 0; }
+  }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="envelope" id="envelope">
+      <div class="env-inner">
+        <div class="env-body">
+          <div class="env-bottom"></div>
+          <div class="flap"></div>
+          <div class="envelope-text">Намайг онгойлго 🎁</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="letter-page" id="letterPage">
+    <h1>🎉 Төрсөн өдрийн мэнд хүргэе!!</h1>
+    <p>Хайрт аавдаа төрсөн өдрийн мэндийг хүргэе! 🎉 Нүүр дүүрэн инээд, зүрх дүүрэн хайр байг. Урт насалж удаан жаргаарай! охин Амгалантуул болон хүү Түшигээс. 🎈💙</p>
+
+    <div class="letter-images">
+      <img src="https://cdn-icons-png.flaticon.com/512/744/744502.png" alt="Cake">
+      <img src="https://cdn-icons-png.flaticon.com/512/3081/3081559.png" alt="Gift">
+      <img src="https://cdn-icons-png.flaticon.com/512/4151/4151150.png" alt="Party">
+    </div>
+
+    <button class="close-btn" id="closeLetter">Close</button>
+  </div>
+
+  <div class="lightbox" id="lightbox">
+    <img id="lightboxImg" src="" alt="preview">
+  </div>
+
+  <script>
+    const envelope = document.getElementById('envelope');
+    const letterPage = document.getElementById('letterPage');
+    const closeBtn = document.getElementById('closeLetter');
+    const lightbox = document.getElementById('lightbox');
+    const lightboxImg = document.getElementById('lightboxImg');
+    const letterImages = document.querySelectorAll('.letter-images img');
+
+    envelope.addEventListener('click', () => {
+      if (!envelope.classList.contains('open')) {
+        envelope.classList.add('open');
+        setTimeout(() => {
+          letterPage.classList.add('show');
+          spawnBalloons();
+        }, 1000);
+      }
+    });
+
+    closeBtn.addEventListener('click', () => {
+      letterPage.classList.remove('show');
+      setTimeout(() => {
+        envelope.classList.remove('open');
+      }, 500);
+    });
+
+    // Lightbox open/close
+    letterImages.forEach(img => {
+      img.addEventListener('click', () => {
+        lightboxImg.src = img.src;
+        lightbox.classList.add('show');
+      });
+    });
+
+    lightbox.addEventListener('click', () => {
+      lightbox.classList.remove('show');
+    });
+
+    // Floating balloons 🎈
+    function spawnBalloons() {
+      const colors = ['#ff6b6b','#ffd166','#6bcB77','#4dabf7','#ff9ff3'];
+      for (let i = 0; i < 15; i++) {
+        const balloon = document.createElement('div');
+        balloon.classList.add('balloon');
+        balloon.style.left = Math.random() * 100 + 'vw';
+        balloon.style.background = colors[Math.floor(Math.random() * colors.length)];
+        balloon.style.animationDuration = 6 + Math.random() * 4 + 's';
+        document.body.appendChild(balloon);
+        setTimeout(() => balloon.remove(), 10000);
+      }
+    }
+  </script>
+</body>
+</html>
